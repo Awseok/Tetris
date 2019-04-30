@@ -12,7 +12,7 @@
 #define NomalXRight 1
 #define NomalYUp 1
 #define NomalYBottom -1
-#define stick_width 0.050000F
+#define stick_width 0.100000F
 #define stick_height 0.200000F
 #pragma warning(disable:4244)
 using namespace std;
@@ -24,16 +24,16 @@ bool block_check();
 void create_block();
 //bool boundCheck();
 
-bool turn_val;
-bool block_box[40][17];
-float rand_red, rand_blue, rand_green;
+bool block_box[8][17];
+double rand_red, rand_blue, rand_green;
 char *crn_block;
-GLfloat Delta, Delta_x;
+GLdouble Delta, Delta_x;
 
 class Block
 {
 public:
-	float x1, y1, x2, y2, width, height, red, blue, green;
+	bool turn_val;
+	double x1, y1, x2, y2, width, height, red, blue, green;
 
 	virtual void turn() {};
 };
@@ -43,6 +43,7 @@ Block *block_pointer;
 class StraightStick : public Block
 {
 public:
+
 	StraightStick()
 	{
 		x1 = -stick_width;
@@ -51,6 +52,7 @@ public:
 		y2 = NomalYUp - stick_height;
 		width = abs(x2 - x1);
 		height = abs(y2 - y1);
+		turn_val = 0;
 	}
 
 	virtual void turn()
@@ -75,7 +77,7 @@ int main(int argc, char **argv)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(-1.0, 1.0, -1.0, 1.0, 1.0, -1.0);
-	for (int i = 0; i < 40; i++)
+	for (int i = 0; i < 8; i++)
 		block_box[i][16] = true;
 	glutDisplayFunc(MyDisplay);
 	glutSpecialFunc(MyKeyboard);
@@ -94,10 +96,10 @@ void MyDisplay()
 
 
 	block_pointer = &st;
-	if (turn_val)
+	if (st.turn_val)
 	{
 		block_pointer->turn();
-		turn_val = false;
+		st.turn_val = false;
 	}
 	glBegin(GL_POLYGON);
 	glColor3f(rand_red, rand_blue, rand_green);
@@ -116,12 +118,12 @@ void MyDisplay()
 	glVertex2d(NomalXLeft + stick_width, NomalYUp);
 	glEnd();
 
-	//glBegin(GL_POLYGON);
-	//glVertex2d(NomalXLeft, NomalYUp - 1.6);
-	//glVertex2d(NomalXLeft, NomalYBottom);
-	//glVertex2d(NomalXRight, NomalYBottom);
-	//glVertex2d(NomalXRight, NomalYUp - 1.6);
-	//glEnd();
+	glBegin(GL_POLYGON);
+	glVertex2d(NomalXLeft, NomalYUp - 1.6);
+	glVertex2d(NomalXLeft, NomalYBottom);
+	glVertex2d(NomalXRight, NomalYBottom);
+	glVertex2d(NomalXRight, NomalYUp - 1.6);
+	glEnd();
 
 	glBegin(GL_POLYGON);
 	glVertex2d(NomalXRight, NomalYUp - 1.6);
@@ -132,70 +134,92 @@ void MyDisplay()
 	glutSwapBuffers();
 }
 
-
-bool block_check()
+class checkBlock
 {
-	int x, y, x2, y2, i, j, temp = 0;
+public:
+	int x1, y1, x2, y2, i, j, temp, val1;
+	float val2;
 
-	x = ((block_pointer->x1 + Delta_x) * 100)/5 + 19; // 19는 배열의 중간 인덱스
 
-	if (10 - (int)((block_pointer->y1 + Delta) * 100) % 10 > 0)
+	checkBlock(StraightStick block)
 	{
-		if (block_pointer->y1 + Delta > 0)
-			y = 10 - (int)((block_pointer->y1 + Delta) * 10 + 0.01);
-		else 
-			y = 10 - (int)((block_pointer->y1 + Delta) * 10 - 0.01);
-	}
-	else
-		y = 10 - (int)((block_pointer->y1 + Delta) * 10);
+		i = j = temp = val1 = 0;
+		val1 = 0;
 
-	x2 = ((block_pointer->x2 + Delta_x) * 100)/5 + 19;
+		x1 = ((block_pointer->x1 + Delta_x) * 10) + 4;
+		val1 = 10 - (int)((block_pointer->y1 + Delta) * 100) % 10;
 
-	if (10 - (int)((block_pointer->y2 + Delta) * 100) % 10 > 0)
-	{
-		if (block_pointer->y2 + Delta > 0)
-			y2 = 10 - (int)((block_pointer->y2 + Delta) * 10 + 0.01);
+		if (val1 > 0)
+		{
+			if (block_pointer->y1 + Delta > 0)
+				val2 = 0.01f;
+			else
+				val2 = -0.01f;
+		}
 		else
-			y2 = 10 - (int)((block_pointer->y2 + Delta) * 10 - 0.01);
+			val2 = 0;
+
+		y1 = 10 - (int)((block_pointer->y1 + Delta) * 10 + val2);
+
+
+		x2 = ((block_pointer->x2 + Delta_x) * 10) + 4;
+		val1 = 10 - (int)((block_pointer->y2 + Delta) * 100) % 10;
+
+		if (val1 > 0)
+		{
+			if (block_pointer->y2 + Delta > 0)
+				val2 = 0.01f;
+			else
+				val2 = -0.01f;
+		}
+		else
+			val2 = 0;
+
+		y2 = 10 - (int)((block_pointer->y2 + Delta) * 10 + val2);
 	}
-	else
-		y2 = 10 - (int)((block_pointer->y2 + Delta) * 10);
-	
-	if (y > y2)
+
+	bool block_check()
 	{
-		temp = y;
-		y = y2;
-		y2 = temp;
+		y1 < y2 ? 0 : temp = y1, y1 = y2, y2 = temp;
+
+		for (i = x1; i <= x2; i++)
+			for (j = y1; j <= y2; j++)
+				if (block_box[i][j])
+					return false;
+
+		return true;
 	}
-	for (i = x; i < x2; i++)
-		for (j = y; j < y2; j++)
-			if (block_box[i][j])
-				return false;
+};
 
-	return true;
-}
-
-void block_store()
+class storeBlock
 {
-	int x, y, x2, y2, i, j, temp = 0;
+	int x1, y1, x2, y2, i, j, temp = 0;
 
-	x = (block_pointer->x1 + Delta_x) * 10 + 8;
-	y = (block_pointer->y1 + Delta) * 10 + 8;
-	x2 = (block_pointer->x2 + Delta_x) * 10 + 8;
-	y2 = (block_pointer->y2 + Delta) * 10 + 8;
-	y < y2 ? 0 : temp = y, y = y2, y2 = temp;
-	for (i = x; i < x2; i++)
-		for (j = y; j < y2; j++)
-			block_box[i][j] = true;
-				
-}
+	storeBlock(checkBlock block)
+	{
+		x1 = block.x1;
+		y1 = block.y1;
+		x2 = block.x2;
+		y2 = block.y2;
+		i = x1;
+		j = y1;
+	}
+
+	void block_store()
+	{
+		for (i; i <= x2; i++)
+			for (j; j <= y2; j++)
+				block_box[i][j] = true;
+	}
+};
 
 void downBlock()
 {
-	if (block_check())
+	if (checkBlock(st).block_check())
 	{
-		Sleep(500);
+		Sleep(700);
 		Delta -= 0.100000f;
+		glutPostRedisplay();
 	}
 
 	//else
@@ -203,18 +227,8 @@ void downBlock()
 	//	block_store();
 	//	create_block();
 	//}
-	glutPostRedisplay();
-}
 
-//bool boundCheck()
-//{
-//	if (block_pointer->x1 + Delta_x < - 0.95 || block_pointer->x2 + Delta_x > 0.95)
-//		return false;
-//	if (block_pointer->y1 + Delta < - 0.65 || block_pointer->y2 + Delta < - 0.6)
-//		return false;
-//	else
-//		return true;
-//}
+}
 
 void create_block()
 {
@@ -226,19 +240,19 @@ void MyKeyboard(int key, int X, int Y)
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
-		if (Delta_x > -0.85)
-			Delta_x -= 0.100000f;
+		if (checkBlock(st).block_check())
+			Delta_x -= block_pointer->width;
 		break;
 	case GLUT_KEY_RIGHT:
-		if (Delta_x < 0.85)
-			Delta_x += 0.100000f;
+		if (checkBlock(st).block_check())
+			Delta_x += block_pointer->width;
 		break;
 	case GLUT_KEY_DOWN:
-		if(Delta > - 1.6)
+		if(checkBlock(st).block_check())
 			Delta -= 0.100000f;
 		break;
 	case GLUT_KEY_UP:
-		turn_val = true;
+		st.turn_val = true;
 		break;
 	}
 }
